@@ -32,11 +32,11 @@ Other applications of [ViTAE](https://github.com/ViTAE-Transformer/ViTAE-Transfo
 ## Main Results
 
 **Total-Text**
-|Backbone|External Data|Det-P|Det-R|Det-F1|E2E-None|E2E-Full|Weights|
-|:------:|:------:|:------:|:------:|:------:|:------:|:------:|:------:|
+|Backbone|External Data|Det-P|Det-R|Det-F1|E2E-None|E2E-Full|Weights|Config|
+|:------:|:------:|:------:|:------:|:------:|:------:|:------:|:------:|:------:|
 |Res-50|Synth150K|93.9|82.1|87.6|78.8|86.2|[OneDrive](https://1drv.ms/u/s!AimBgYV7JjTlgcd3oqq103k359L2PQ?e=tkxgol)|
 |Res-50|Synth150K+MLT17+IC13+IC15|93.1|82.1|87.3|79.7|87.0|[OneDrive](https://1drv.ms/u/s!AimBgYV7JjTlgcd2FhvW7pjuKs4iLQ?e=TqYdjG)|
-|Res-50|Synth150K+MLT17+IC13+IC15+TextOCR|93.2|84.6|88.7|$\underline{\text{82.5}}$|$\underline{\text{88.7}}$|[OneDrive](https://1drv.ms/u/s!AimBgYV7JjTlgcd138p8HaXViFk-tw?e=r15pMR)|
+|Res-50|Synth150K+MLT17+IC13+IC15+TextOCR|93.2|84.6|88.7|$\underline{\text{82.5}}$|$\underline{\text{88.7}}$|[OneDrive](https://1drv.ms/u/s!AimBgYV7JjTlgcd138p8HaXViFk-tw?e=r15pMR)|[config](configs/R_50/TotalText/finetune_150k_tt_mlt_13_15_textocr.yaml)|
 |Res-101|Synth150K+MLT17+IC13+IC15|93.2|83.5|88.1|80.1|87.1|[OneDrive](https://1drv.ms/u/s!AimBgYV7JjTlgcd0wgXgTNJg3lD4qQ?e=wuOPfN)|
 |Swin-T|Synth150K+MLT17+IC13+IC15|92.8|83.5|87.9|79.7|87.1|[OneDrive](https://1drv.ms/u/s!AimBgYV7JjTlgcd5mc12FlChwGCUig?e=Xjdtis)|
 |Swin-S|Synth150K+MLT17+IC13 +C15|93.7|84.2|88.7|81.3|87.8|[OneDrive](https://1drv.ms/u/s!AimBgYV7JjTlgcd4Rn_bg8cOn-LwEg?e=dVqz7z)|
@@ -282,6 +282,11 @@ python tools/train_net.py --config-file ${CONFIG_FILE} --eval-only MODEL.WEIGHTS
 - ### Visualization Demo
 ```
 python demo/demo.py --config-file ${CONFIG_FILE} --input ${IMAGES_FOLDER_OR_ONE_IMAGE_PATH} --output ${OUTPUT_PATH} --opts MODEL.WEIGHTS <MODEL_PATH>
+```
+
+For example, in this computer you can do:
+```
+python demo/demo.py --config-file configs/R_50/TotalText/finetune_150k_tt_mlt_13_15_textocr.yaml --input /home/jadiel/workspace/datasets/text_search_dataset/images/cvs_cropped --output /home/jadiel/workspace/datasets/text_search_dataset/images_annotated/cvs_cropped --opts MODEL.WEIGHTS /home/jadiel/workspace/DeepSolo/models/tt_res50_finetune_synth-tt-mlt-13-15-textocr.pth
 ```
 
 ## Citation
