@@ -160,6 +160,7 @@ class TransformerPureDetector(nn.Module):
             self.max_size_test = cfg.INPUT.MAX_SIZE_TEST
 
         d2_backbone = MaskedBackbone(cfg)
+        # TODO MARKER: Start studying source code from this point on.
         backbone = Joiner(
             d2_backbone,
             PositionalEncoding2D(N_steps, cfg.MODEL.TRANSFORMER.TEMPERATURE, normalize=True)
