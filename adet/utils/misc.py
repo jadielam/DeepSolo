@@ -160,6 +160,12 @@ def nested_tensor_from_tensor_list(tensor_list: List[Tensor]):
 
 
 class NestedTensor(object):
+    """
+    Wrapper around a tensors and a mask for them.
+    
+    The mask is needed to account for feature tensors of different sizes, because they
+    were derived from input images of different sizes.
+    """
     def __init__(self, tensors, mask: Optional[Tensor]):
         self.tensors = tensors
         self.mask = mask
@@ -169,7 +175,7 @@ class NestedTensor(object):
         cast_tensor = self.tensors.to(device)
         mask = self.mask
         if mask is not None:
-            assert mask is not None
+            assert mask is not None # ?
             cast_mask = mask.to(device)
         else:
             cast_mask = None

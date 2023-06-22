@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Dict, Any
 import numpy as np
 import torch
 from torch import nn
@@ -14,10 +14,17 @@ from adet.utils.misc import NestedTensor
 
 
 class Joiner(nn.Sequential):
+    """
+
+    """
     def __init__(self, backbone, position_embedding):
         super().__init__(backbone, position_embedding)
 
     def forward(self, tensor_list: NestedTensor):
+        """
+        TODO: This forward statement can probably be optimized if we remove
+        the for loop and replace it with some pytorch native parallelization.
+        """
         xs = self[0](tensor_list)
         out: List[NestedTensor] = []
         pos = []
@@ -30,7 +37,10 @@ class Joiner(nn.Sequential):
 
 
 class MaskedBackbone(nn.Module):
-    """ This is a thin wrapper around D2's backbone to provide padding masking"""
+    """
+    This is a thin wrapper around D2's backbone to provide padding masking
+    
+    """
     def __init__(self, cfg):
         super().__init__()
         self.backbone = build_backbone(cfg)
@@ -38,8 +48,22 @@ class MaskedBackbone(nn.Module):
         self.feature_strides = [backbone_shape[f].stride for f in backbone_shape.keys()]
         self.num_channels = backbone_shape[list(backbone_shape.keys())[-1]].channels
 
-    def forward(self, images):
-        features = self.backbone(images.tensor)
+    def forward(self, images: ImageList) -> Dict[Any, NestedTensor]:
+        """
+        Args: 
+            images (ImageList): images tensor list of images of potentially different sizes,
+                padded to the size of the largest image.
+        Returns:
+            Dict[Any, Tensor]: dict where the key is likely a string specifying the feature level
+                of the features (i.e.: for Resnet50 it could be "res3", "res4" and "res5"), 
+                and the value is a NestedTensor object containing the computed features
+                for that level.
+                The NestedTensor object is a wrapper around the features tensor and the padding mask.
+                The features tensor is of shape (N, C, H, W) and the padding mask is of shape (N, H, W).
+                The padding mask contains 1's in padded locations and 0's elsewhere (in contrast with
+                usual implementation of padding masks that contain 0's in padded locations and 1's elsewhere)
+        """
+        features: Dict[str, torch.Tensor] = self.backbone(images.tensor)
         masks = self.mask_out_padding(
             [features_per_level.shape for features_per_level in features.values()],
             images.image_sizes,
@@ -50,7 +74,21 @@ class MaskedBackbone(nn.Module):
             features[k] = NestedTensor(features[k], masks[i])
         return features
 
-    def mask_out_padding(self, feature_shapes, image_sizes, device):
+    def mask_out_padding(self, feature_shapes, image_sizes, device) -> List[torch.Tensor]:
+        """
+        Args:
+            feature_shapes (List[torch.Size]): list of torch.Size objects specifying the shape of 
+                the features computed at each feature level.
+            image_sizes (List[Tuple[int, int]]): list of tuples (height, width) specifying the
+                size of each image in the batch.
+            device (torch.device): device on which the features will be placed.
+        Returns:
+            tensor_list: A list of torch.Tensors corresponding to the padding masks for each feature level.
+                Each tensor has shape (N, Hi, Wi), where N is the number of images in the batch, and Hi and
+                Wi correspond to the height and width of the feature level, respectively.
+                Each tensor contains 1's in padded locations, and 0's elsewhere (in contrast with
+                usual implementation of padding masks that contain 0's in padded locations and 1's elsewhere)
+        """
         masks = []
         assert len(feature_shapes) == len(self.feature_strides)
         for idx, shape in enumerate(feature_shapes):
@@ -181,7 +219,7 @@ class TransformerPureDetector(nn.Module):
         self.normalizer = lambda x: (x - pixel_mean) / pixel_std
         self.to(self.device)
 
-    def preprocess_image(self, batched_inputs):
+    def preprocess_image(self, batched_inputs) -> ImageList:
         """
         Normalize, pad and batch the input images.
         """
