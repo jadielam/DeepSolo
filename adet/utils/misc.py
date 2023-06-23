@@ -166,7 +166,7 @@ class NestedTensor(object):
     The mask is needed to account for feature tensors of different sizes, because they
     were derived from input images of different sizes.
     """
-    def __init__(self, tensors, mask: Optional[Tensor]):
+    def __init__(self, tensors: torch.Tensor, mask: Optional[Tensor]):
         self.tensors = tensors
         self.mask = mask
 

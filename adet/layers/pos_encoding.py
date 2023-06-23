@@ -2,6 +2,8 @@ import torch
 import numpy as np
 import torch.nn as nn
 
+from adet.utils.misc import NestedTensor
+
 class PositionalEncoding1D(nn.Module):
     def __init__(self, num_pos_feats=64, temperature=10000, normalize=False, scale=None):
         """
@@ -47,6 +49,14 @@ class PositionalEncoding2D(nn.Module):
     """
     This is a more standard version of the positional embedding, very similar to the one
     used by the Attention is all you need paper, generalized to work on images.
+
+    Arguments:
+        num_pos_feats: int. The number of positional embeddings per spatial location.
+            Given that the spatial location embeddings are concatenated, the num_pos_feats
+            is usually, the number of hidden dimensions of the transformer divided by 2.
+        temperature: int. Temperature, larger values make embeddings more uniform initially.
+        normalize: bool. Whether to normalize the embeddings.
+        scale: float. Scale of the embeddings.
     """
     def __init__(self, num_pos_feats=64, temperature=10000, normalize=False, scale=None):
         super().__init__()
@@ -59,13 +69,24 @@ class PositionalEncoding2D(nn.Module):
             scale = 2 * np.pi
         self.scale = scale
 
-    def forward(self, tensors):
+    def forward(self, tensors: NestedTensor) -> torch.Tensor:
+        """
+        Args:
+            tensors: NestedTensor. A NestedTensor that contains a tensor of size (B, C, H, W) 
+                and a mask of size (B, H, W).
+        
+        Returns:
+            pos: torch.Tensor. A tensor of size (B, num_pos_feats, H, W).
+        """
         x = tensors.tensors
         mask = tensors.mask
         assert mask is not None
         not_mask = ~mask
         y_embed = not_mask.cumsum(1, dtype=torch.float32)
         x_embed = not_mask.cumsum(2, dtype=torch.float32)
+        # The normalization causes that for different sizes of images, the positional
+        # embeddings will be of the same scale. i.e.: items in the corners will have
+        # similar positional embedding values.
         if self.normalize:
             eps = 1e-6
             y_embed = (y_embed - 0.5) / (y_embed[:, -1:, :] + eps) * self.scale

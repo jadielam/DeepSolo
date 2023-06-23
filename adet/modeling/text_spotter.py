@@ -1,4 +1,4 @@
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple
 import numpy as np
 import torch
 from torch import nn
@@ -17,15 +17,27 @@ class Joiner(nn.Sequential):
     """
 
     """
-    def __init__(self, backbone, position_embedding):
+    def __init__(self, backbone: 'MaskedBackbone', position_embedding: PositionalEncoding2D):
         super().__init__(backbone, position_embedding)
 
-    def forward(self, tensor_list: NestedTensor):
+    def forward(self, tensor_list: ImageList) -> Tuple[List[NestedTensor], List[torch.Tensor]]:
         """
-        TODO: This forward statement can probably be optimized if we remove
-        the for loop and replace it with some pytorch native parallelization.
+        Passes the list of images through the backbone, and passes each of the resulting features
+        from the backbone through the positional embedding layer. Returns both the output features
+        of the backbone and their corresponding positional embeddings as two lists.
+
+        Args:
+            tensor_list (ImageList): list of images, of shape (N, C, H, W).
+
+        Returns:
+            List[NestedTensor]: list of NestedTensor objects. A NestedTensor that contains a tensor 
+                of size (B, C, H, W) and a mask of size (B, H, W).
+            List[Tensor]: list of position embedding tensors, same size as the list of 
+                nested tensors.
         """
-        xs = self[0](tensor_list)
+        # xs will contain nested tensors for the each feature level output of
+        # the backbone.
+        xs: Dict[Any, NestedTensor] = self[0](tensor_list)
         out: List[NestedTensor] = []
         pos = []
         for _, x in xs.items():
@@ -45,8 +57,9 @@ class MaskedBackbone(nn.Module):
         super().__init__()
         self.backbone = build_backbone(cfg)
         backbone_shape = self.backbone.output_shape()
-        self.feature_strides = [backbone_shape[f].stride for f in backbone_shape.keys()]
-        self.num_channels = backbone_shape[list(backbone_shape.keys())[-1]].channels
+        self.feature_strides: List[int] = [backbone_shape[f].stride for f in backbone_shape.keys()]
+        # The number of channels of the last feature map returned by the backbone
+        self.num_channels: int = backbone_shape[list(backbone_shape.keys())[-1]].channels
 
     def forward(self, images: ImageList) -> Dict[Any, NestedTensor]:
         """
@@ -160,12 +173,12 @@ class TransformerPureDetector(nn.Module):
             self.max_size_test = cfg.INPUT.MAX_SIZE_TEST
 
         d2_backbone = MaskedBackbone(cfg)
-        # TODO MARKER: Start studying source code from this point on.
         backbone = Joiner(
             d2_backbone,
             PositionalEncoding2D(N_steps, cfg.MODEL.TRANSFORMER.TEMPERATURE, normalize=True)
         )
         backbone.num_channels = d2_backbone.num_channels
+        # TODO: MARKER of where to start reading
         self.detection_transformer = DETECTION_TRANSFORMER(cfg, backbone)
         bezier_matcher, point_matcher = build_matcher(cfg)
 
